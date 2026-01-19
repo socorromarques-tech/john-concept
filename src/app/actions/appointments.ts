@@ -7,17 +7,23 @@ import { redirect } from "next/navigation"
 
 const prisma = new PrismaClient()
 
-export async function getAppointments(date?: Date) {
+export async function getAppointments(start?: Date, end?: Date) {
   const session = await auth()
   if (!session?.user?.id) return []
 
-  // If date is provided, filter by that day (start 00:00 to end 23:59)
-  // For now, let's just return all upcoming appointments + past ones from today
-  
-  return await prisma.appointment.findMany({
-    where: {
+  const whereClause: any = {
       userId: session.user.id,
-    },
+  }
+
+  if (start && end) {
+      whereClause.date = {
+          gte: start,
+          lte: end
+      }
+  }
+
+  return await prisma.appointment.findMany({
+    where: whereClause,
     include: {
         client: true,
         services: true
@@ -25,7 +31,7 @@ export async function getAppointments(date?: Date) {
     orderBy: {
       date: "asc",
     },
-    take: 50 // Limit to 50 for performance for now
+    take: start && end ? undefined : 50 // Limit to 50 if no specific range is requested
   })
 }
 

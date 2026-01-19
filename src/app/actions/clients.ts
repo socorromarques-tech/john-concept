@@ -16,7 +16,7 @@ export async function getClients() {
       userId: session.user.id,
     },
     orderBy: {
-      createdAt: "desc",
+      name: "asc", 
     },
   })
 }
@@ -121,4 +121,22 @@ export async function deleteClient(id: string) {
 
   revalidatePath("/clients")
   revalidatePath("/")
+}
+
+export async function getClientHistory(clientId: string) {
+  const session = await auth()
+  if (!session?.user?.id) return []
+
+  return await prisma.appointment.findMany({
+    where: {
+      userId: session.user.id,
+      clientId: clientId,
+    },
+    include: {
+      services: true,
+    },
+    orderBy: {
+      date: "desc",
+    },
+  })
 }

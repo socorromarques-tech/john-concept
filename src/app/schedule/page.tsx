@@ -1,103 +1,61 @@
 "use client"
 
-import { getAppointments } from "../actions/appointments"
+import { getAppointments, deleteAppointment, updateAppointmentStatus } from "../actions/appointments"
 import Link from "next/link"
-import { format } from "date-fns"
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { AppointmentActions } from "./components/AppointmentActions"
-import { StatusBadge } from "./components/StatusBadge"
-import { CalendarView } from "./components/CalendarView"
-import { NotificationManager } from "./components/NotificationManager"
 import { useState, useEffect } from "react"
 
 export default function SchedulePage() {
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [appointments, setAppointments] = useState<any[]>([])
-  const [filteredAppointments, setFilteredAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
-  const [dateFilter, setDateFilter] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Calendar Logic
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }) // Sunday start
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 })
+
+  const calendarDays = eachDayOfInterval({
+    start: startDate,
+    end: endDate,
+  })
 
   useEffect(() => {
-    loadAppointments()
-  }, [])
-
-  useEffect(() => {
-    filterAppointments()
-  }, [appointments, dateFilter, statusFilter])
-
-  const loadAppointments = async () => {
-    try {
-      const data = await getAppointments()
-      setAppointments(data)
-    } catch (error) {
-      console.error("Erro ao carregar agendamentos:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const filterAppointments = () => {
-    let filtered = [...appointments]
-
-    // Filter by date
-    if (dateFilter) {
-      filtered = filtered.filter(apt => 
-        format(new Date(apt.date), 'yyyy-MM-dd') === dateFilter
-      )
+    const fetchAppointments = async () => {
+      setLoading(true)
+      try {
+        // Fetch huge range (could be optimized) or just the month
+        // Fetching specifically for the view range
+        const data = await getAppointments(startDate, endDate)
+        setAppointments(data)
+      } catch (error) {
+        console.error("Erro ao buscar agendamentos", error)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(apt => apt.status === statusFilter)
-    }
+    fetchAppointments()
+  }, [currentDate])
 
-    filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    setFilteredAppointments(filtered)
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 justify-between">
-              <div className="flex items-center gap-8">
-                <Link href="/" className="text-xl font-bold text-indigo-600">John Concept</Link>
-                <div className="flex gap-4">
-                  <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-900">Dashboard</Link>
-                  <Link href="/clients" className="text-sm font-medium text-gray-500 hover:text-gray-900">Clientes</Link>
-                  <Link href="/schedule" className="text-sm font-medium text-gray-900">Agenda</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        <main className="py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <p>Carregando...</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    )
-  }
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1))
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1))
+  const goToToday = () => setCurrentDate(new Date())
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NotificationManager />
-      <nav className="bg-white shadow">
+    <div className="min-h-screen bg-brand-gray">
+      <nav className="bg-brand-black shadow">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 justify-between">
-            <div className="flex items-center gap-8">
-              <Link href="/" className="text-xl font-bold text-indigo-600">John Concept</Link>
-              <div className="flex gap-4">
-                <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-900">Dashboard</Link>
-                <Link href="/clients" className="text-sm font-medium text-gray-500 hover:text-gray-900">Clientes</Link>
-                <Link href="/schedule" className="text-sm font-medium text-gray-900">Agenda</Link>
-              </div>
+          <div className="flex h-16 justify-between items-center">
+             <div className="flex items-center gap-8">
+               <Link href="/" className="text-xl font-serif font-bold text-white">John Concept</Link>
+               <div className="flex gap-4">
+                  <Link href="/" className="text-sm font-medium text-gray-300 hover:text-white">Dashboard</Link>
+                  <Link href="/clients" className="text-sm font-medium text-gray-300 hover:text-white">Clientes</Link>
+                  <Link href="/schedule" className="text-sm font-medium text-white border-b border-white pb-0.5">Agenda</Link>
+               </div>
             </div>
           </div>
         </div>
@@ -105,144 +63,130 @@ export default function SchedulePage() {
 
       <main className="py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900">Agenda</h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  {filteredAppointments.length} agendamento{filteredAppointments.length !== 1 ? 's' : ''} 
-                  {dateFilter || statusFilter !== 'all' ? ' (filtrados)' : ' total'}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`px-3 py-1 text-sm rounded ${
-                      viewMode === 'list' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Lista
+          <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+               <h1 className="text-3xl font-serif font-bold tracking-tight text-brand-black capitalize">
+                 {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+               </h1>
+               <div className="flex items-center rounded-md bg-white shadow-sm ring-1 ring-inset ring-gray-300">
+                  <button onClick={prevMonth} className="px-3 py-2 hover:bg-gray-50 rounded-l-md border-r border-gray-300">
+                    &larr;
                   </button>
-                  <button
-                    onClick={() => setViewMode('calendar')}
-                    className={`px-3 py-1 text-sm rounded ${
-                      viewMode === 'calendar' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Calendário
+                  <button onClick={goToToday} className="px-4 py-2 text-sm font-semibold hover:bg-gray-50 border-r border-gray-300 hidden sm:block">
+                    Hoje
                   </button>
-                </div>
-                <Link
-                  href="/schedule/new"
-                  className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  Novo Agendamento
-                </Link>
-              </div>
+                  <button onClick={nextMonth} className="px-3 py-2 hover:bg-gray-50 rounded-r-md">
+                    &rarr;
+                  </button>
+               </div>
             </div>
-
-            {viewMode === 'list' && (
-              <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg shadow">
-                <div className="flex-1">
-                  <label htmlFor="dateFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                    Filtrar por Data
-                  </label>
-                  <input
-                    type="date"
-                    id="dateFilter"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                    Filtrar por Status
-                  </label>
-                  <select
-                    id="statusFilter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    <option value="all">Todos os status</option>
-                    <option value="SCHEDULED">Agendado</option>
-                    <option value="COMPLETED">Concluído</option>
-                    <option value="CANCELLED">Cancelado</option>
-                    <option value="NO_SHOW">Não compareceu</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => {
-                      setDateFilter('')
-                      setStatusFilter('all')
-                    }}
-                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
-                  >
-                    Limpar Filtros
-                  </button>
-                </div>
-              </div>
-            )}
+            
+            <Link
+              href="/schedule/new"
+              className="w-full sm:w-auto text-center rounded-md bg-brand-green px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+            >
+              + Novo Agendamento
+            </Link>
           </div>
 
-          {viewMode === 'calendar' ? (
-            <CalendarView 
-              appointments={filteredAppointments} 
-              onDateClick={(date) => {
-                // Navigate to new appointment with pre-filled date
-                window.location.href = `/schedule/new?date=${format(date, 'yyyy-MM-dd')}`
-              }}
-            />
-          ) : (
-            <div className="overflow-hidden rounded-lg bg-white shadow">
-              <ul role="list" className="divide-y divide-gray-100">
-                {filteredAppointments.length === 0 ? (
-                  <li className="p-8 text-center text-gray-500">
-                    {dateFilter || statusFilter !== 'all' 
-                      ? 'Nenhum agendamento encontrado com os filtros selecionados.'
-                      : 'Nenhum agendamento encontrado.'
-                    }
-                  </li>
-                ) : (
-                  filteredAppointments.map((apt) => (
-                    <li key={apt.id} className="flex flex-col gap-2 py-5 px-6 hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex min-w-0 gap-x-4">
-                        
-                        <div className="min-w-0 flex-auto">
-                          <p className="text-lg font-semibold leading-6 text-gray-900">
-                             {format(new Date(apt.date), "HH:mm", { locale: ptBR })}
-                             <span className="ml-2 font-normal text-gray-500 text-sm">
-                               - {format(new Date(apt.date), "dd 'de' MMMM", { locale: ptBR })}
-                             </span>
-                          </p>
-                          <p className="mt-1 truncate text-sm font-medium text-indigo-600">{apt.client.name}</p>
-                          {apt.notes && <p className="mt-1 truncate text-xs text-gray-500">{apt.notes}</p>}
+          {/* Calendar Grid */}
+          <div className="lg:flex lg:h-auto lg:flex-col">
+            <div className="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col rounded-lg overflow-hidden bg-white">
+              {/* Desktops Header */}
+              <div className="grid grid-cols-7 gap-px border-b border-gray-300 bg-gray-200 text-center text-xs font-semibold leading-6 text-gray-700 lg:flex-none">
+                <div className="bg-white py-2">Dom</div>
+                <div className="bg-white py-2">Seg</div>
+                <div className="bg-white py-2">Ter</div>
+                <div className="bg-white py-2">Qua</div>
+                <div className="bg-white py-2">Qui</div>
+                <div className="bg-white py-2">Sex</div>
+                <div className="bg-white py-2">Sáb</div>
+              </div>
+              
+              {/* Days Grid */}
+              <div className="flex bg-gray-200 text-xs leading-6 text-gray-700 lg:flex-auto">
+                <div className="hidden w-full lg:grid lg:grid-cols-7 lg:grid-rows-5 lg:gap-px">
+                  {calendarDays.map((day) => {
+                     const isCurrentMonth = isSameMonth(day, currentDate)
+                     const dayProtocol = format(day, 'yyyy-MM-dd')
+                     const dayAppointments = appointments.filter(apt => format(new Date(apt.date), 'yyyy-MM-dd') === dayProtocol)
+                     
+                     return (
+                        <div key={day.toString()} className={`relative px-3 py-2 min-h-[120px] ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-500'}`}>
+                          <time dateTime={dayProtocol} className={
+                              isToday(day) 
+                              ? "flex h-6 w-6 items-center justify-center rounded-full bg-brand-green font-semibold text-white" 
+                              : undefined
+                          }>
+                            {format(day, 'd')}
+                          </time>
+                          
+                          {/* Desktop Appointments List */}
+                          <ol className="mt-2">
+                             {loading ? (
+                                <p className="animate-pulse h-2 bg-gray-200 rounded w-full"></p>
+                             ) : (
+                                 dayAppointments.map(apt => (
+                                     <li key={apt.id}>
+                                        <Link href={`/schedule/${apt.id}/edit`} className="group flex flex-col mb-1 p-1 rounded hover:bg-gray-100 cursor-pointer border-l-2 border-brand-green bg-green-50/30">
+                                           <div className="flex justify-between items-center">
+                                              <p className="font-semibold text-gray-900 group-hover:text-brand-green">
+                                                  {format(new Date(apt.date), 'HH:mm')} - {apt.client.name.split(' ')[0]}
+                                              </p>
+                                           </div>
+                                            <p className="truncate text-gray-500 group-hover:text-gray-700 mt-0.5" title={apt.services.map((s: any) => s.description).join(', ')}>
+                                                {apt.services.length > 0 ? apt.services[0].description : 'Serviço'}
+                                            </p>
+                                        </Link>
+                                     </li>
+                                 ))
+                             )}
+                          </ol>
                         </div>
-                      </div>
-                      <div className="mt-2 flex flex-col items-start gap-2 sm:mt-0 sm:items-end">
-                         {apt.services.length > 0 ? (
-                             apt.services.map((service: any) => (
-                                 <div key={service.id} className="rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                                     {service.description} - R$ {Number(service.price).toFixed(2).replace('.', ',')}
-                                 </div>
-                             ))
-                         ) : (
-                             <span className="text-xs text-gray-400">Sem serviços</span>
-                         )}
-                         <div className="flex items-center gap-2">
-                           <StatusBadge appointmentId={apt.id} currentStatus={apt.status} />
-                           <AppointmentActions appointmentId={apt.id} />
-                         </div>
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
+                     )
+                  })}
+                </div>
+                
+                {/* Mobile View (List of days with appointments or empty) - Simplified to just list upcoming for MVP responsiveness or stack grid */}
+                <div className="w-full lg:hidden block bg-white">
+                   <div className="p-4 text-center text-gray-500 text-sm">
+                      <p>Para uma melhor experiência de calendário, use um computador.</p>
+                      <p className="mt-2">Abaixo, lista simplificada dos dias com agendamentos neste mês:</p>
+                   </div>
+                   <ul className="divide-y divide-gray-100">
+                     {calendarDays.filter(day => {
+                        const dayProtocol = format(day, 'yyyy-MM-dd')
+                        return appointments.some(apt => format(new Date(apt.date), 'yyyy-MM-dd') === dayProtocol)
+                     }).map(day => (
+                        <li key={day.toString()} className="p-4">
+                           <div className="font-bold mb-2">{format(day, "dd 'de' MMMM", { locale: ptBR })}</div>
+                           <ul className="space-y-2">
+                             {appointments
+                               .filter(apt => format(new Date(apt.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+                               .map(apt => (
+                                 <li key={apt.id} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
+                                     <span>{format(new Date(apt.date), 'HH:mm')} - {apt.client.name}</span>
+                                     <Link href={`/schedule/${apt.id}/edit`} className="text-indigo-600">Editar</Link>
+                                 </li>
+                               ))
+                             }
+                           </ul>
+                        </li>
+                     ))}
+                   </ul>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+          
+          <div className="mt-8">
+             <h2 className="text-lg font-bold mb-4">Agenda em Lista (Mês Atual)</h2>
+             {/* Reusing the list view but filtered logic is already in calendar */}
+             <div className="overflow-hidden rounded-lg bg-white shadow-lg border border-gray-100 p-4">
+                <p className="text-gray-500 text-sm">Visualize os detalhes completos clicando nos cards acima.</p>
+             </div>
+          </div>
+
         </div>
       </main>
     </div>

@@ -44,7 +44,9 @@ export default async function ClientsPage() {
                   <li key={client.id} className="flex flex-col sm:flex-row justify-between gap-4 py-5 px-6 hover:bg-gray-50">
                     <div className="flex min-w-0 gap-x-4">
                       <div className="min-w-0 flex-auto">
-                        <p className="text-base font-semibold leading-6 text-brand-black">{client.name}</p>
+                        <Link href={`/clients/${client.id}/history`}>
+                            <p className="text-base font-semibold leading-6 text-brand-black hover:text-brand-green transition-colors">{client.name}</p>
+                        </Link>
                         <p className="mt-1 truncate text-xs leading-5 text-gray-500">{client.email || "Sem email"}</p>
                         <p className="sm:hidden text-sm leading-6 text-gray-700 mt-1">{client.phone || "Sem telefone"}</p>
                       </div>
@@ -53,6 +55,10 @@ export default async function ClientsPage() {
                       <p className="hidden sm:block text-sm leading-6 text-gray-900">{client.phone || "Sem telefone"}</p>
                       
                       <div className="flex items-center gap-3">
+                          <Link href={`/clients/${client.id}/history`} className="text-sm font-medium text-brand-green hover:text-green-800 bg-green-50 px-2 py-1 rounded">
+                            Histórico
+                          </Link>
+                          <span className="text-gray-300">|</span>
                           <Link href={`/clients/${client.id}/edit`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900">
                             Editar
                           </Link>
@@ -60,7 +66,7 @@ export default async function ClientsPage() {
                              "use server"
                              await deleteClient(client.id)
                           }}>
-                              <button type="submit" className="text-sm font-medium text-red-600 hover:text-red-900">
+                              <button type="submit" className="text-sm font-medium text-red-600 hover:text-red-900 ml-3">
                                 Excluir
                               </button>
                           </form>
