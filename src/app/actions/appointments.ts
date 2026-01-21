@@ -22,7 +22,7 @@ export async function getAppointments(start?: Date, end?: Date) {
       }
   }
 
-  return await prisma.appointment.findMany({
+  const data = await prisma.appointment.findMany({
     where: whereClause,
     include: {
         client: true,
@@ -33,13 +33,21 @@ export async function getAppointments(start?: Date, end?: Date) {
     },
     take: start && end ? undefined : 50 // Limit to 50 if no specific range is requested
   })
+
+  return data.map(appt => ({
+    ...appt,
+    services: appt.services.map(s => ({
+      ...s,
+      price: s.price.toString()
+    }))
+  }))
 }
 
 export async function getAppointment(id: string) {
   const session = await auth()
   if (!session?.user?.id) return null
 
-  return await prisma.appointment.findFirst({
+  const data = await prisma.appointment.findFirst({
     where: {
       id,
       userId: session.user.id,
@@ -49,6 +57,16 @@ export async function getAppointment(id: string) {
       services: true
     }
   })
+
+  if (!data) return null
+
+  return {
+    ...data,
+    services: data.services.map(s => ({
+      ...s,
+      price: s.price.toString()
+    }))
+  }
 }
 
 export async function updateAppointment(formData: FormData) {
@@ -63,6 +81,21 @@ export async function updateAppointment(formData: FormData) {
   const timeStr = formData.get("time") as string // HH:mm
   const notes = formData.get("notes") as string
   const status = formData.get("status") as string
+  const servicesCount = parseInt(formData.get("servicesCount") as string) || 0
+
+  // Coletar múltiplos serviços
+  const services = []
+  for (let i = 0; i < servicesCount; i++) {
+    const description = formData.get(`service_${i}_description`) as string
+    const price = formData.get(`service_${i}_price`) as string
+    
+    if (description && price) {
+      services.push({
+        description,
+        price: parseFloat(price?.replace(",", ".") || "0")
+      })
+    }
+  }
 
   if (!appointmentId || !clientId || !dateStr || !timeStr) {
       throw new Error("Preencha todos os campos obrigatórios.")
@@ -81,6 +114,10 @@ export async function updateAppointment(formData: FormData) {
         date: dateTime,
         notes,
         status,
+        services: {
+            deleteMany: {}, // Delete all existing services
+            create: services // Create the new list
+        }
       },
     })
   } catch (error) {

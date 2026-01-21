@@ -66,7 +66,7 @@ export async function getDashboardStats() {
   }, 0)
   
   // 4. List of Today's Appointments (Inc. Scheduled and Completed)
-  const todayAppointmentsList = await prisma.appointment.findMany({
+  const rawTodayAppointments = await prisma.appointment.findMany({
     where: {
         userId,
         date: {
@@ -84,6 +84,14 @@ export async function getDashboardStats() {
     }
   })
 
+  const todayAppointmentsList = rawTodayAppointments.map(appt => ({
+    ...appt,
+    services: appt.services.map(s => ({
+      ...s,
+      price: s.price.toString()
+    }))
+  }))
+
   // 5. Tomorrow Appointments Count
   const tomorrowAppointmentsCount = await prisma.appointment.count({
       where: {
@@ -97,8 +105,6 @@ export async function getDashboardStats() {
   })
 
   // 6. Birthdays (This week)
-  // Fetching all clients to filter in memory (MVP approach, efficiently assumes < 1000 clients for now)
-  // A raw query would be better for scale, but this keeps it typed and simple.
   const allClients = await prisma.client.findMany({
       where: { userId, birthDate: { not: null } },
       select: { id: true, name: true, birthDate: true }
@@ -118,7 +124,6 @@ export async function getDashboardStats() {
       if (bMonth === currentMonth && bDay >= currentDay && bDay <= nextWeekDay) {
           return true
       }
-      // TODO: Handle month turnover (e.g. Jan 30 to Feb 5) - MVP ignores for now or keeps simple
       return false
   })
 
