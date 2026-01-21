@@ -43,9 +43,18 @@ export async function createClient(formData: FormData) {
   const phone = formData.get("phone") as string
   const email = formData.get("email") as string
   const notes = formData.get("notes") as string
+  const birthDateStr = formData.get("birthDate") as string // YYYY-MM-DD
 
   if (!name) {
     throw new Error("Nome é obrigatório")
+  }
+
+  let birthDate = null
+  if (birthDateStr) {
+      // Create date at noon UTC to avoid timezone shifts making it previous day
+      // Or just standard new Date(str) usually results in UTC midnight.
+      // With simple YYYY-MM-DD input, new Date("2023-05-20") is UTC 00:00.
+      birthDate = new Date(birthDateStr)
   }
 
   try {
@@ -55,6 +64,7 @@ export async function createClient(formData: FormData) {
         phone,
         email,
         notes,
+        birthDate,
         userId: session.user.id,
       },
     })
@@ -76,9 +86,15 @@ export async function updateClient(id: string, formData: FormData) {
   const phone = formData.get("phone") as string
   const email = formData.get("email") as string
   const notes = formData.get("notes") as string
+  const birthDateStr = formData.get("birthDate") as string
 
   if (!name) {
     throw new Error("Nome é obrigatório")
+  }
+
+  let birthDate = null
+  if (birthDateStr) {
+      birthDate = new Date(birthDateStr)
   }
 
   try {
@@ -92,6 +108,7 @@ export async function updateClient(id: string, formData: FormData) {
         phone,
         email,
         notes,
+        birthDate,
       },
     })
   } catch (error) {

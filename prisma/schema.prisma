@@ -68,6 +68,7 @@ model Client {
   name  String
   phone String?
   email String?
+  birthDate DateTime?
   notes String?
 
   userId String

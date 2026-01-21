@@ -1,8 +1,10 @@
 import { getClient, updateClient } from "../../../actions/clients"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { format } from "date-fns"
 
-export default async function EditClientPage({ params }: { params: { id: string } }) {
+export default async function EditClientPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const client = await getClient(params.id)
 
   if (!client) {
@@ -10,6 +12,9 @@ export default async function EditClientPage({ params }: { params: { id: string 
   }
 
   const updateClientWithId = updateClient.bind(null, client.id)
+  
+  // Format birthDate to YYYY-MM-DD for input value if it exists
+  const birthDateValue = client.birthDate ? format(new Date(client.birthDate), 'yyyy-MM-dd') : ''
 
   return (
     <div className="min-h-screen bg-brand-gray">
@@ -74,6 +79,19 @@ export default async function EditClientPage({ params }: { params: { id: string 
                     name="email"
                     id="email"
                     defaultValue={client.email || ""}
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-green sm:text-sm sm:leading-6"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="birthDate" className="block text-sm font-medium leading-6 text-gray-900">Data de Nascimento</label>
+                <div className="mt-2">
+                  <input
+                    type="date"
+                    name="birthDate"
+                    id="birthDate"
+                    defaultValue={birthDateValue}
                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-green sm:text-sm sm:leading-6"
                   />
                 </div>

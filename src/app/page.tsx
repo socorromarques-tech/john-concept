@@ -68,7 +68,7 @@ export default async function Home() {
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-16 relative z-30 pb-12">
           
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {/* Stats Cards */}
             <div className="overflow-hidden rounded-xl bg-white shadow-lg border-t-4 border-brand-green transition hover:transform hover:scale-[1.02] duration-200">
               <div className="px-6 py-6">
@@ -91,6 +91,41 @@ export default async function Home() {
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.revenueToday)}
                 </dd>
               </div>
+            </div>
+
+             {/* Alerts Card */}
+             <div className="overflow-hidden rounded-xl bg-brand-black text-white shadow-lg border-t-4 border-indigo-500 transition hover:transform hover:scale-[1.02] duration-200 relative">
+                <div className="px-6 py-6">
+                   <dt className="truncate text-sm font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Notificações
+                   </dt>
+                   <dd className="mt-4 space-y-3">
+                      {stats.alerts.birthdays.length > 0 ? (
+                          <div className="flex items-start gap-2 text-sm">
+                             <span>🎂</span>
+                             <span>
+                                <span className="font-bold text-brand-gold">{stats.alerts.birthdays.length}</span> aniversariante(s) esta semana!
+                             </span>
+                          </div>
+                      ) : (
+                          <div className="text-sm text-gray-500 italic">Sem aniversariantes próximos.</div>
+                      )}
+
+                      {stats.alerts.tomorrowAppointments > 0 ? (
+                          <div className="flex items-start gap-2 text-sm">
+                             <span>📅</span>
+                             <span>
+                                <span className="font-bold text-white">{stats.alerts.tomorrowAppointments}</span> agendamentos amanhã.
+                             </span>
+                          </div>
+                      ) : (
+                           <div className="text-sm text-gray-500 italic">Agenda livre amanhã.</div>
+                      )}
+                   </dd>
+                </div>
             </div>
           </div>
           

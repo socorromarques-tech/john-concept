@@ -2,61 +2,135 @@
 
 import { auth } from "@/auth"
 import { PrismaClient } from "@prisma/client"
-import { startOfDay, endOfDay } from "date-fns"
+import { startOfDay, endOfDay, addDays, getMonth, getDate, isSameDay } from "date-fns"
 
 const prisma = new PrismaClient()
 
 export async function getDashboardStats() {
   const session = await auth()
-  if (!session?.user?.id) return { 
-    appointmentsToday: 0, 
-    activeClients: 0, 
-    revenueToday: 0, 
-    todayAppointments: [] 
+  
+  if (!session?.user?.id) {
+    return {
+      appointmentsToday: 0,
+      activeClients: 0,
+      revenueToday: 0,
+      todayAppointments: [],
+      alerts: {
+          birthdays: [],
+          tomorrowAppointments: 0
+      }
+    }
   }
 
   const userId = session.user.id
-  const now = new Date()
-  const start = startOfDay(now)
-  const end = endOfDay(now)
+  const today = new Date()
+  const tomorrow = addDays(today, 1)
 
-  // 1. Get appointments for today
-  const todayAppointments = await prisma.appointment.findMany({
+  // 1. Appointments Today
+  const appointmentsTodayCount = await prisma.appointment.count({
     where: {
       userId,
       date: {
-        gte: start,
-        lte: end,
+        gte: startOfDay(today),
+        lte: endOfDay(today),
       },
-    },
-    include: {
-      client: true,
-      services: true,
-    },
-    orderBy: {
-      date: "asc",
+      status: { not: "CANCELLED" }
     },
   })
 
-  // 2. Count active clients
-  const activeClients = await prisma.client.count({
+  // 2. Active Clients (Total)
+  const activeClientsCount = await prisma.client.count({
     where: {
       userId,
     },
   })
 
-  // 3. Calculate revenue for today
-  const revenueToday = todayAppointments.reduce((total, apt) => {
-    const aptTotal = apt.services.reduce((sum, service) => {
-      return sum + Number(service.price)
-    }, 0)
-    return total + aptTotal
+  // 3. Revenue Today
+  const appointmentsToday = await prisma.appointment.findMany({
+    where: {
+      userId,
+      date: {
+        gte: startOfDay(today),
+        lte: endOfDay(today),
+      },
+      status: "COMPLETED",
+    },
+    include: {
+        services: true
+    }
+  })
+
+  const revenueToday = appointmentsToday.reduce((total, appt) => {
+      const servicesTotal = appt.services.reduce((acc, s) => acc + Number(s.price), 0)
+      return total + servicesTotal
   }, 0)
+  
+  // 4. List of Today's Appointments (Inc. Scheduled and Completed)
+  const todayAppointmentsList = await prisma.appointment.findMany({
+    where: {
+        userId,
+        date: {
+            gte: startOfDay(today),
+            lte: endOfDay(today),
+        },
+        status: { not: "CANCELLED" }
+    },
+    include: {
+        client: true,
+        services: true
+    },
+    orderBy: {
+        date: 'asc'
+    }
+  })
+
+  // 5. Tomorrow Appointments Count
+  const tomorrowAppointmentsCount = await prisma.appointment.count({
+      where: {
+          userId,
+          date: {
+              gte: startOfDay(tomorrow),
+              lte: endOfDay(tomorrow)
+          },
+          status: { not: "CANCELLED" }
+      }
+  })
+
+  // 6. Birthdays (This week)
+  // Fetching all clients to filter in memory (MVP approach, efficiently assumes < 1000 clients for now)
+  // A raw query would be better for scale, but this keeps it typed and simple.
+  const allClients = await prisma.client.findMany({
+      where: { userId, birthDate: { not: null } },
+      select: { id: true, name: true, birthDate: true }
+  })
+
+  const currentMonth = getMonth(today)
+  const currentDay = getDate(today)
+  const nextWeekDay = getDate(addDays(today, 7))
+  
+  // Filter birthdays in the next 7 days
+  const upcomingBirthdays = allClients.filter(client => {
+      if (!client.birthDate) return false
+      const bMonth = getMonth(client.birthDate)
+      const bDay = getDate(client.birthDate)
+      
+      // Handle simple case: same month, day is between today and today+7
+      if (bMonth === currentMonth && bDay >= currentDay && bDay <= nextWeekDay) {
+          return true
+      }
+      // TODO: Handle month turnover (e.g. Jan 30 to Feb 5) - MVP ignores for now or keeps simple
+      return false
+  })
+
 
   return {
-    appointmentsToday: todayAppointments.length,
-    activeClients,
+    appointmentsToday: appointmentsTodayCount,
+    activeClients: activeClientsCount,
     revenueToday,
-    todayAppointments,
+    todayAppointments: todayAppointmentsList,
+    alerts: {
+        birthdays: upcomingBirthdays,
+        tomorrowAppointments: tomorrowAppointmentsCount
+    }
   }
 }
