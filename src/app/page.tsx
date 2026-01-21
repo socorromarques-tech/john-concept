@@ -95,35 +95,44 @@ export default async function Home() {
 
              {/* Alerts Card */}
              <div className="overflow-hidden rounded-xl bg-brand-black text-white shadow-lg border-t-4 border-indigo-500 transition hover:transform hover:scale-[1.02] duration-200 relative">
-                <div className="px-6 py-6">
+                <div className="px-6 py-6 h-full">
                    <dt className="truncate text-sm font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                       Notificações
                    </dt>
-                   <dd className="mt-4 space-y-3">
+                   <dd className="mt-4 space-y-4">
                       {stats.alerts.birthdays.length > 0 ? (
-                          <div className="flex items-start gap-2 text-sm">
-                             <span>🎂</span>
-                             <span>
-                                <span className="font-bold text-brand-gold">{stats.alerts.birthdays.length}</span> aniversariante(s) esta semana!
-                             </span>
+                          <div className="flex flex-col gap-2 text-sm">
+                             <div className="flex items-center gap-2">
+                               <span>🎂</span>
+                               <span>
+                                  <span className="font-bold text-brand-gold">{stats.alerts.birthdays.length}</span> aniversariante(s) esta semana:
+                               </span>
+                             </div>
+                             <ul className="pl-6 space-y-1">
+                                {stats.alerts.birthdays.map((b: any) => (
+                                    <li key={b.id}>
+                                        <Link href={`/clients/${b.id}/history`} className="text-gray-300 hover:text-white underline decoration-gray-500 hover:decoration-white underline-offset-2">
+                                            {b.name} ({format(new Date(b.birthDate), "dd/MM")})
+                                        </Link>
+                                    </li>
+                                ))}
+                             </ul>
                           </div>
                       ) : (
                           <div className="text-sm text-gray-500 italic">Sem aniversariantes próximos.</div>
                       )}
 
                       {stats.alerts.tomorrowAppointments > 0 ? (
-                          <div className="flex items-start gap-2 text-sm">
+                          <div className="flex items-start gap-2 text-sm pt-2 border-t border-gray-700">
                              <span>📅</span>
                              <span>
                                 <span className="font-bold text-white">{stats.alerts.tomorrowAppointments}</span> agendamentos amanhã.
                              </span>
                           </div>
-                      ) : (
-                           <div className="text-sm text-gray-500 italic">Agenda livre amanhã.</div>
-                      )}
+                      ) : null}
                    </dd>
                 </div>
             </div>
@@ -162,7 +171,7 @@ export default async function Home() {
                      ) : (
                        stats.todayAppointments.map((apt) => (
                         <li key={apt.id} className="hover:bg-gray-50 transition-colors">
-                          <div className="px-6 py-5">
+                          <Link href={`/schedule/${apt.id}/edit`} className="block px-6 py-5 group relative">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                 <div className="flex-shrink-0 flex flex-col items-center justify-center h-14 w-14 rounded-lg bg-brand-gray text-brand-black border border-gray-200">
@@ -170,7 +179,7 @@ export default async function Home() {
                                    <span className="text-xs uppercase font-medium">{format(new Date(apt.date), "mm", { locale: ptBR })}</span>
                                 </div>
                                 <div>
-                                   <p className="text-base font-semibold text-brand-black">{apt.client.name}</p>
+                                   <p className="text-base font-semibold text-brand-black group-hover:text-brand-green transition-colors">{apt.client.name}</p>
                                    <p className="text-sm text-gray-500">
                                       {apt.services.map(s => s.description).join(", ") || "Serviço Geral"}
                                    </p>
@@ -183,7 +192,7 @@ export default async function Home() {
                                  {apt.notes && <span className="text-xs text-gray-400 italic max-w-[150px] truncate" title={apt.notes}>{apt.notes}</span>}
                               </div>
                             </div>
-                          </div>
+                          </Link>
                         </li>
                        ))
                      )}
